@@ -3,7 +3,7 @@
 
 -- Configurações
 local ESP_SETTINGS = {
-    ENABLED = true,
+    ENABLED = true, -- Começa ativado
     WALLHACK = true, -- Ver através das paredes
     SHOW_NAMES = true,
     SHOW_DISTANCE = true,
@@ -45,7 +45,29 @@ espFolder.Parent = playerGui
 local espCache = {}
 local connections = {}
 local controlGui = nil
-local isGUIVisible = false
+
+-- Função para atualizar todos os ESPs visuais
+local function updateAllESPVisibility()
+    for _, espObject in pairs(espCache) do
+        -- Atualizar visibilidade de todos os elementos do ESP
+        if espObject.Box then 
+            espObject.Box.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_BOX 
+        end
+        if espObject.NameLabel then 
+            espObject.NameLabel.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_NAMES 
+            espObject.NameLabel.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(100, 100, 100)
+        end
+        if espObject.DistanceLabel then 
+            espObject.DistanceLabel.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_DISTANCE 
+        end
+        if espObject.HealthLabel then 
+            espObject.HealthLabel.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_HEALTH 
+        end
+        if espObject.Tracer then 
+            espObject.Tracer.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_TRACER 
+        end
+    end
+end
 
 -- Função para criar a interface básica
 local function createBasicGUI()
@@ -60,46 +82,52 @@ local function createBasicGUI()
     -- Frame principal do botão
     local mainButtonFrame = Instance.new("Frame")
     mainButtonFrame.Name = "MainButtonFrame"
-    mainButtonFrame.Size = UDim2.new(0, 80, 0, 40)
-    mainButtonFrame.Position = UDim2.new(1, -90, 0, 20)
+    mainButtonFrame.Size = UDim2.new(0, 100, 0, 50)
+    mainButtonFrame.Position = UDim2.new(1, -110, 0, 20)
     mainButtonFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainButtonFrame.BackgroundTransparency = 0.3
+    mainButtonFrame.BackgroundTransparency = 0.2
     mainButtonFrame.BorderSizePixel = 0
     mainButtonFrame.Parent = screenGui
     
     -- Arredondar cantos
     local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 8)
+    uiCorner.CornerRadius = UDim.new(0, 10)
     uiCorner.Parent = mainButtonFrame
     
     -- Sombra suave
     local uiStroke = Instance.new("UIStroke")
-    uiStroke.Color = Color3.fromRGB(100, 100, 100)
-    uiStroke.Thickness = 1
+    uiStroke.Color = Color3.fromRGB(80, 80, 80)
+    uiStroke.Thickness = 2
     uiStroke.Parent = mainButtonFrame
     
     -- Botão ESP
     local espButton = Instance.new("TextButton")
     espButton.Name = "ESPButton"
-    espButton.Size = UDim2.new(1, 0, 1, 0)
-    espButton.BackgroundTransparency = 1
-    espButton.Text = "ESP"
+    espButton.Size = UDim2.new(1, -10, 1, -10)
+    espButton.Position = UDim2.new(0, 5, 0, 5)
+    espButton.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+    espButton.BackgroundTransparency = 0.3
+    espButton.Text = ESP_SETTINGS.ENABLED and "ESP: ON" or "ESP: OFF"
     espButton.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
     espButton.TextSize = 16
     espButton.Font = Enum.Font.GothamBold
     espButton.Parent = mainButtonFrame
     
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = espButton
+    
     -- Botão de configurações (pequeno)
     local settingsButton = Instance.new("TextButton")
     settingsButton.Name = "SettingsButton"
-    settingsButton.Size = UDim2.new(0, 25, 0, 25)
-    settingsButton.Position = UDim2.new(0, -30, 0, 8)
+    settingsButton.Size = UDim2.new(0, 30, 0, 30)
+    settingsButton.Position = UDim2.new(0, -35, 0.5, -15)
     settingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     settingsButton.BackgroundTransparency = 0.3
     settingsButton.Text = "⚙"
     settingsButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-    settingsButton.TextSize = 14
-    settingsButton.Font = Enum.Font.Gotham
+    settingsButton.TextSize = 16
+    settingsButton.Font = Enum.Font.GothamBold
     settingsButton.Visible = false
     settingsButton.Parent = mainButtonFrame
     
@@ -110,79 +138,91 @@ local function createBasicGUI()
     -- Painel de configurações
     local settingsPanel = Instance.new("Frame")
     settingsPanel.Name = "SettingsPanel"
-    settingsPanel.Size = UDim2.new(0, 180, 0, 250)
-    settingsPanel.Position = UDim2.new(0, -190, 0, 0)
-    settingsPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    settingsPanel.BackgroundTransparency = 0.2
+    settingsPanel.Size = UDim2.new(0, 200, 0, 300)
+    settingsPanel.Position = UDim2.new(0, -205, 0, 0)
+    settingsPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    settingsPanel.BackgroundTransparency = 0.1
     settingsPanel.BorderSizePixel = 0
     settingsPanel.Visible = false
     settingsPanel.Parent = mainButtonFrame
     
     local panelCorner = Instance.new("UICorner")
-    panelCorner.CornerRadius = UDim.new(0, 8)
+    panelCorner.CornerRadius = UDim.new(0, 10)
     panelCorner.Parent = settingsPanel
     
     local panelStroke = Instance.new("UIStroke")
-    panelStroke.Color = Color3.fromRGB(80, 80, 80)
-    panelStroke.Thickness = 1
+    panelStroke.Color = Color3.fromRGB(60, 60, 60)
+    panelStroke.Thickness = 2
     panelStroke.Parent = settingsPanel
     
     -- Título do painel
     local panelTitle = Instance.new("TextLabel")
     panelTitle.Name = "Title"
-    panelTitle.Size = UDim2.new(1, 0, 0, 30)
+    panelTitle.Size = UDim2.new(1, 0, 0, 40)
     panelTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     panelTitle.BackgroundTransparency = 0.5
-    panelTitle.Text = "Configurações ESP"
+    panelTitle.Text = "CONFIGURAÇÕES ESP"
     panelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    panelTitle.TextSize = 14
+    panelTitle.TextSize = 16
     panelTitle.Font = Enum.Font.GothamBold
     panelTitle.Parent = settingsPanel
     
     local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.CornerRadius = UDim.new(0, 10)
     titleCorner.Parent = panelTitle
     
     -- Container para os toggles
     local toggleContainer = Instance.new("ScrollingFrame")
     toggleContainer.Name = "ToggleContainer"
-    toggleContainer.Size = UDim2.new(1, -10, 1, -40)
-    toggleContainer.Position = UDim2.new(0, 5, 0, 35)
+    toggleContainer.Size = UDim2.new(1, -10, 1, -50)
+    toggleContainer.Position = UDim2.new(0, 5, 0, 45)
     toggleContainer.BackgroundTransparency = 1
     toggleContainer.BorderSizePixel = 0
     toggleContainer.ScrollBarThickness = 4
-    toggleContainer.CanvasSize = UDim2.new(0, 0, 0, 200)
+    toggleContainer.CanvasSize = UDim2.new(0, 0, 0, 250)
     toggleContainer.Parent = settingsPanel
     
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 5)
+    layout.Padding = UDim.new(0, 8)
     layout.Parent = toggleContainer
     
     -- Função para criar um toggle
-    local function createToggleOption(text, settingName)
+    local function createToggleOption(text, settingName, description)
         local toggleFrame = Instance.new("Frame")
-        toggleFrame.Size = UDim2.new(1, 0, 0, 25)
-        toggleFrame.BackgroundTransparency = 1
+        toggleFrame.Size = UDim2.new(1, 0, 0, 35)
+        toggleFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        toggleFrame.BackgroundTransparency = 0.5
         toggleFrame.Parent = toggleContainer
+        
+        local frameCorner = Instance.new("UICorner")
+        frameCorner.CornerRadius = UDim.new(0, 6)
+        frameCorner.Parent = toggleFrame
         
         local label = Instance.new("TextLabel")
         label.Text = text
-        label.Size = UDim2.new(0.7, 0, 1, 0)
+        label.Size = UDim2.new(0.65, 0, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
         label.TextColor3 = Color3.fromRGB(255, 255, 255)
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.BackgroundTransparency = 1
-        label.TextSize = 12
-        label.Font = Enum.Font.Gotham
+        label.TextSize = 14
+        label.Font = Enum.Font.GothamBold
         label.Parent = toggleFrame
+        
+        if description then
+            label.Text = text .. "\n" .. description
+            label.TextYAlignment = Enum.TextYAlignment.Top
+            label.TextSize = 12
+        end
         
         local toggle = Instance.new("TextButton")
         toggle.Name = settingName
-        toggle.Size = UDim2.new(0.3, 0, 1, 0)
-        toggle.Position = UDim2.new(0.7, 0, 0, 0)
+        toggle.Size = UDim2.new(0.3, 0, 0.7, 0)
+        toggle.Position = UDim2.new(0.68, 0, 0.15, 0)
         toggle.Text = ESP_SETTINGS[settingName] and "ON" or "OFF"
-        toggle.BackgroundColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-        toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-        toggle.TextSize = 12
+        toggle.BackgroundColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(120, 0, 0)
+        toggle.TextColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100)
+        toggle.TextSize = 13
         toggle.Font = Enum.Font.GothamBold
         toggle.Parent = toggleFrame
         
@@ -193,51 +233,75 @@ local function createBasicGUI()
         toggle.MouseButton1Click:Connect(function()
             ESP_SETTINGS[settingName] = not ESP_SETTINGS[settingName]
             toggle.Text = ESP_SETTINGS[settingName] and "ON" or "OFF"
-            toggle.BackgroundColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+            toggle.BackgroundColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(120, 0, 0)
+            toggle.TextColor3 = ESP_SETTINGS[settingName] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100)
             
-            -- Se for o toggle principal, atualizar cor do botão
+            -- Se for o toggle principal, atualizar o botão ESP
             if settingName == "ENABLED" then
+                espButton.Text = ESP_SETTINGS.ENABLED and "ESP: ON" or "ESP: OFF"
                 espButton.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
+                espButton.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+                
+                -- Atualizar visibilidade de todos os ESPs
+                updateAllESPVisibility()
             end
+            
+            print(text .. ": " .. (ESP_SETTINGS[settingName] and "ATIVADO" or "DESATIVADO"))
         end)
+        
+        return toggleFrame
     end
     
     -- Criar toggles
-    createToggleOption("ESP", "ENABLED")
-    createToggleOption("Wallhack", "WALLHACK")
-    createToggleOption("Nomes", "SHOW_NAMES")
-    createToggleOption("Distância", "SHOW_DISTANCE")
-    createToggleOption("Vida", "SHOW_HEALTH")
-    createToggleOption("Caixa", "SHOW_BOX")
-    createToggleOption("Linha", "SHOW_TRACER")
+    createToggleOption("ESP", "ENABLED", "Ativar/Desativar sistema")
+    createToggleOption("Wallhack", "WALLHACK", "Ver através das paredes")
+    createToggleOption("Nomes", "SHOW_NAMES", "Mostrar nomes")
+    createToggleOption("Distância", "SHOW_DISTANCE", "Mostrar distância")
+    createToggleOption("Vida", "SHOW_HEALTH", "Mostrar saúde")
+    createToggleOption("Caixa", "SHOW_BOX", "Caixa ao redor")
+    createToggleOption("Linha", "SHOW_TRACER", "Linha guia")
     
     -- Atualizar tamanho do canvas
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        toggleContainer.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+        toggleContainer.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
     end)
     
     -- Conectar eventos dos botões
+    
+    -- Botão ESP principal
     espButton.MouseButton1Click:Connect(function()
         ESP_SETTINGS.ENABLED = not ESP_SETTINGS.ENABLED
+        
+        -- Atualizar aparência do botão
+        espButton.Text = ESP_SETTINGS.ENABLED and "ESP: ON" or "ESP: OFF"
         espButton.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
+        espButton.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
         
         -- Atualizar toggle no painel
         local toggleBtn = settingsPanel:FindFirstChild("ToggleContainer"):FindFirstChild("ENABLED")
         if toggleBtn then
             toggleBtn.Text = ESP_SETTINGS.ENABLED and "ON" or "OFF"
-            toggleBtn.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+            toggleBtn.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(120, 0, 0)
+            toggleBtn.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100)
         end
+        
+        -- Atualizar visibilidade de todos os ESPs
+        updateAllESPVisibility()
+        
+        print("ESP " .. (ESP_SETTINGS.ENABLED and "ATIVADO" or "DESATIVADO"))
     end)
     
+    -- Botão de configurações
     settingsButton.MouseButton1Click:Connect(function()
         settingsPanel.Visible = not settingsPanel.Visible
         settingsButton.Text = settingsPanel.Visible and "✕" or "⚙"
+        settingsButton.BackgroundColor3 = settingsPanel.Visible and Color3.fromRGB(80, 80, 80) or Color3.fromRGB(50, 50, 50)
     end)
     
     -- Mostrar/ocultar botão de configurações ao passar o mouse
     mainButtonFrame.MouseEnter:Connect(function()
         settingsButton.Visible = true
-        local tween = TweenService:Create(settingsButton, TweenInfo.new(0.2), {Position = UDim2.new(0, -30, 0, 8)})
+        local tween = TweenService:Create(settingsButton, TweenInfo.new(0.2), {Position = UDim2.new(0, -35, 0.5, -15)})
         tween:Play()
     end)
     
@@ -249,26 +313,26 @@ local function createBasicGUI()
     
     -- Fechar painel ao clicar fora
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
             local mousePos = UserInputService:GetMouseLocation()
-            local panelAbsolutePos = settingsPanel.AbsolutePosition
-            local panelAbsoluteSize = settingsPanel.AbsoluteSize
             
-            -- Verificar se clique foi fora do painel
             if settingsPanel.Visible then
-                if not (mousePos.X >= panelAbsolutePos.X and mousePos.X <= panelAbsolutePos.X + panelAbsoluteSize.X and
-                       mousePos.Y >= panelAbsolutePos.Y and mousePos.Y <= panelAbsolutePos.Y + panelAbsoluteSize.Y) then
-                    
-                    -- Verificar se não foi no botão de configurações
-                    local buttonAbsolutePos = settingsButton.AbsolutePosition
-                    local buttonAbsoluteSize = settingsButton.AbsoluteSize
-                    
-                    if not (mousePos.X >= buttonAbsolutePos.X and mousePos.X <= buttonAbsolutePos.X + buttonAbsoluteSize.X and
-                           mousePos.Y >= buttonAbsolutePos.Y and mousePos.Y <= buttonAbsolutePos.Y + buttonAbsoluteSize.Y) then
-                        
-                        settingsPanel.Visible = false
-                        settingsButton.Text = "⚙"
-                    end
+                local panelAbsolutePos = settingsPanel.AbsolutePosition
+                local panelAbsoluteSize = settingsPanel.AbsoluteSize
+                local buttonAbsolutePos = settingsButton.AbsolutePosition
+                local buttonAbsoluteSize = settingsButton.AbsoluteSize
+                
+                -- Verificar se clique foi fora do painel e fora do botão de configurações
+                local clickedOnPanel = (mousePos.X >= panelAbsolutePos.X and mousePos.X <= panelAbsolutePos.X + panelAbsoluteSize.X and
+                                       mousePos.Y >= panelAbsolutePos.Y and mousePos.Y <= panelAbsolutePos.Y + panelAbsoluteSize.Y)
+                
+                local clickedOnButton = (mousePos.X >= buttonAbsolutePos.X and mousePos.X <= buttonAbsolutePos.X + buttonAbsoluteSize.X and
+                                        mousePos.Y >= buttonAbsolutePos.Y and mousePos.Y <= buttonAbsolutePos.Y + buttonAbsoluteSize.Y)
+                
+                if not clickedOnPanel and not clickedOnButton then
+                    settingsPanel.Visible = false
+                    settingsButton.Text = "⚙"
+                    settingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                 end
             end
         end
@@ -277,7 +341,7 @@ local function createBasicGUI()
     return screenGui
 end
 
--- Função para criar um objeto ESP (mantida igual)
+-- Função para criar um objeto ESP
 local function createESPObject(player)
     local espObject = {
         Player = player,
@@ -298,7 +362,7 @@ local function createESPObject(player)
         box.ZIndex = 5
         box.Size = Vector3.new(4, 6, 2)
         box.Transparency = 0.3
-        box.Visible = false
+        box.Visible = ESP_SETTINGS.ENABLED
         box.Parent = espFolder
         
         espObject.Box = box
@@ -320,7 +384,7 @@ local function createESPObject(player)
         nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
         nameLabel.TextStrokeTransparency = 0.5
         nameLabel.TextSize = ESP_SETTINGS.TEXT_SIZE
-        nameLabel.Visible = false
+        nameLabel.Visible = ESP_SETTINGS.ENABLED
         nameLabel.Parent = screenGui
         
         espObject.NameLabel = nameLabel
@@ -335,7 +399,7 @@ local function createESPObject(player)
         distanceLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
         distanceLabel.TextStrokeTransparency = 0.5
         distanceLabel.TextSize = ESP_SETTINGS.TEXT_SIZE - 2
-        distanceLabel.Visible = false
+        distanceLabel.Visible = ESP_SETTINGS.ENABLED
         distanceLabel.Parent = screenGui
         
         espObject.DistanceLabel = distanceLabel
@@ -350,7 +414,7 @@ local function createESPObject(player)
         healthLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
         healthLabel.TextStrokeTransparency = 0.5
         healthLabel.TextSize = ESP_SETTINGS.TEXT_SIZE - 2
-        healthLabel.Visible = false
+        healthLabel.Visible = ESP_SETTINGS.ENABLED
         healthLabel.Parent = screenGui
         
         espObject.HealthLabel = healthLabel
@@ -364,7 +428,7 @@ local function createESPObject(player)
         tracer.BorderSizePixel = 0
         tracer.Size = UDim2.new(0, 2, 0, 100)
         tracer.Rotation = 0
-        tracer.Visible = false
+        tracer.Visible = ESP_SETTINGS.ENABLED
         tracer.Parent = screenGui
         
         espObject.Tracer = tracer
@@ -377,6 +441,7 @@ local function createESPObject(player)
         
         if espObject.Box then
             espObject.Box.Adornee = humanoidRootPart
+            espObject.Box.Visible = ESP_SETTINGS.ENABLED and ESP_SETTINGS.SHOW_BOX
         end
         
         if humanoid and espObject.HealthLabel then
@@ -594,7 +659,9 @@ table.insert(connections, UserInputService.InputBegan:Connect(function(input, ga
             -- Atualizar botão na interface
             local espButton = controlGui:FindFirstChild("MainButtonFrame"):FindFirstChild("ESPButton")
             if espButton then
+                espButton.Text = ESP_SETTINGS.ENABLED and "ESP: ON" or "ESP: OFF"
                 espButton.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
+                espButton.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
             end
             
             -- Atualizar toggle no painel
@@ -603,11 +670,15 @@ table.insert(connections, UserInputService.InputBegan:Connect(function(input, ga
                 local toggleBtn = settingsPanel:FindFirstChild("ToggleContainer"):FindFirstChild("ENABLED")
                 if toggleBtn then
                     toggleBtn.Text = ESP_SETTINGS.ENABLED and "ON" or "OFF"
-                    toggleBtn.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
+                    toggleBtn.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(120, 0, 0)
+                    toggleBtn.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 100)
                 end
             end
             
-            print("ESP " .. (ESP_SETTINGS.ENABLED and "ativado" or "desativado"))
+            -- Atualizar visibilidade de todos os ESPs
+            updateAllESPVisibility()
+            
+            print("ESP " .. (ESP_SETTINGS.ENABLED and "ATIVADO" or "DESATIVADO"))
         end
     end
 end))
