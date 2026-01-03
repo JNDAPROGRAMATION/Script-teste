@@ -722,4 +722,83 @@ local function initialize()
     -- Criar círculo de FOV
     createFOVCircle()
     if fovCircle then
-        fovCircle:FindFirstChild("Circle").Visible = ESP_SETTINGS.AIMB
+        fovCircle:FindFirstChild("Circle").Visible = ESP_SETTINGS.AIMBOT_ENABLED
+    end
+    
+    -- Inicializar ESP para jogadores existentes
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            createESPObject(player)
+        end
+    end
+    
+    -- Conectar eventos
+    table.insert(connections, Players.PlayerAdded:Connect(function(player)
+        if player ~= localPlayer then
+            createESPObject(player)
+        end
+    end))
+    
+    table.insert(connections, Players.PlayerRemoving:Connect(function(player)
+        local espObject = espCache[player]
+        if espObject then
+            for _, connection in ipairs(espObject.Connections) do
+                connection:Disconnect()
+            end
+            
+            if espObject.Box then espObject.Box:Destroy() end
+            if espObject.NameLabel then espObject.NameLabel.Parent:Destroy() end
+            
+            espCache[player] = nil
+        end
+    end))
+    
+    -- Loop de atualização do ESP
+    table.insert(connections, RunService.RenderStepped:Connect(function()
+        updateAllESP()
+    end))
+    
+    -- Eventos do Aimbot
+    table.insert(connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed then
+            -- Tecla Insert para ESP
+            if input.KeyCode == Enum.KeyCode.Insert then
+                ESP_SETTINGS.ENABLED = not ESP_SETTINGS.ENABLED
+                
+                local espButton = controlGui:FindFirstChild("MainFrame"):FindFirstChild("ButtonContainer"):FindFirstChild("ESPButton")
+                if espButton then
+                    espButton.Text = ESP_SETTINGS.ENABLED and "ESP: ON" or "ESP: OFF"
+                    espButton.TextColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
+                    espButton.BackgroundColor3 = ESP_SETTINGS.ENABLED and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+                end
+                
+                updateAllESPVisibility()
+            end
+            
+            -- Tecla do aimbot
+            if input.KeyCode == ESP_SETTINGS.AIMBOT_KEY then
+                isAimbotKeyDown = true
+            end
+        end
+    end))
+    
+    table.insert(connections, UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if input.KeyCode == ESP_SETTINGS.AIMBOT_KEY then
+            isAimbotKeyDown = false
+            aimbotTarget = nil
+        end
+    end))
+    
+    -- Loop do Aimbot
+    aimbotConnection = RunService.RenderStepped:Connect(aimbotUpdate)
+    table.insert(connections, aimbotConnection)
+end
+
+-- Iniciar
+initialize()
+
+print("ESP + Aimbot carregado!")
+print("Teclas:")
+print("  Insert - Ativar/Desativar ESP")
+print("  " .. ESP_SETTINGS.AIMBOT_KEY.Name .. " - Segurar para usar Aimbot")
+print("Interface com botões de controle no canto superior direito")
